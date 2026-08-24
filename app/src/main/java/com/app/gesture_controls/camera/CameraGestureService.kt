@@ -14,7 +14,7 @@ import androidx.compose.runtime.State
 import androidx.lifecycle.LifecycleService
 import com.app.gesture_controls.gesture.DoublePinchDetector
 import com.app.gesture_controls.gesture.GestureControlState
-import com.app.gesture_controls.gesture.PinchDetector
+import com.app.gesture_controls.gesture.FingerGestureDetector
 import com.app.gesture_controls.gesture.SwipeDetector
 import com.app.gesture_controls.vision.HandLandmarkerHelper
 import com.app.gesture_controls.actions.Action
@@ -47,7 +47,7 @@ class CameraGestureService : LifecycleService() {
 
     private lateinit var handLandmarkerHelper: HandLandmarkerHelper
     private lateinit var cameraManager: CameraManager
-    private val pinchDetector = PinchDetector()
+    private val fingerDetector = FingerGestureDetector()
     private val doublePinchDetector = DoublePinchDetector()
     private val swipeDetector = SwipeDetector()
 
@@ -87,23 +87,24 @@ class CameraGestureService : LifecycleService() {
             if (hands.isNotEmpty()) {
                 val primaryHand = hands[0]
 
-                // 1. Detect Pinch / Tap / Double Pinch
-                val pinchDetected = pinchDetector.update(primaryHand)
-                if (pinchDetected) {
-                    Log.d(TAG, "PINCH detected")
+                // 1. Detect Finger Gestures (Pinch/Fist)
+                val fingerAction = fingerDetector.update(primaryHand)
+                if (fingerAction != Action.NONE) {
                     
-                    val doublePinch = doublePinchDetector.update(pinchDetected)
-                    if (doublePinch) {
-                        Log.d(TAG, "DOUBLE PINCH detected")
-                        Log.d(TAG, "Gesture Control → INACTIVE")
-                        stopSelf()
-                    } else {
-                        // If not a double pinch (yet), it might be a tap
-                        GestureActionDispatcher.dispatch(Action.TAP)
+                    // Special case: Double Pinch to stop
+                    if (fingerAction == Action.TAP) {
+                        val isDoublePinch = doublePinchDetector.update(true)
+                        if (isDoublePinch) {
+                            Log.d(TAG, "DOUBLE PINCH detected → Stopping")
+                            stopSelf()
+                            return@HandLandmarkerHelper
+                        }
                     }
+
+                    GestureActionDispatcher.dispatch(fingerAction)
                 }
 
-                // 2. Detect Swipes (Scroll / Volume)
+                // 2. Detect Swipes (Back-up in case fingers are hard to see)
                 val swipeAction = swipeDetector.update(primaryHand)
                 if (swipeAction != Action.NONE) {
                     GestureActionDispatcher.dispatch(swipeAction)

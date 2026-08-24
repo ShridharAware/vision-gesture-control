@@ -16,7 +16,7 @@ class SwipeDetector {
     private val xHistory = mutableListOf<Float>()
     private val yHistory = mutableListOf<Float>()
     private var lastSwipeTime = 0L
-    private val swipeCooldown = 1000L // 1 second between swipes
+    private val swipeCooldown = 500L // Reduced from 1000ms
 
     fun update(landmarks: List<NormalizedLandmark>): Action {
         if (landmarks.size < 21) return Action.NONE

@@ -64,9 +64,10 @@ class ActionExecutor(
                 // Swipe from bottom to top (Next Reel)
                 swipe(
                     screenWidth / 2f,
-                    screenHeight * 0.8f,
+                    screenHeight * 0.7f,
                     screenWidth / 2f,
-                    screenHeight * 0.2f
+                    screenHeight * 0.3f,
+                    500
                 )
             }
 
@@ -74,9 +75,10 @@ class ActionExecutor(
                 // Swipe from top to bottom (Previous Reel)
                 swipe(
                     screenWidth / 2f,
-                    screenHeight * 0.2f,
+                    screenHeight * 0.3f,
                     screenWidth / 2f,
-                    screenHeight * 0.8f
+                    screenHeight * 0.7f,
+                    500
                 )
             }
 
@@ -94,7 +96,8 @@ class ActionExecutor(
         startX: Float,
         startY: Float,
         endX: Float,
-        endY: Float
+        endY: Float,
+        durationMs: Long = 300
     ) {
         val path = Path()
         path.moveTo(startX, startY)
@@ -105,7 +108,7 @@ class ActionExecutor(
             GestureDescription.StrokeDescription(
                 path,
                 0,
-                300
+                durationMs
             )
         )
 
