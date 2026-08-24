@@ -16,7 +16,7 @@ class CameraManager(
     private val handLandmarkerHelper: HandLandmarkerHelper
 ) {
 
-    fun startCamera(previewView: PreviewView) {
+    fun startCamera(previewView: PreviewView? = null) {
 
         val cameraProviderFuture =
             ProcessCameraProvider.getInstance(context)
@@ -26,11 +26,16 @@ class CameraManager(
             val cameraProvider =
                 cameraProviderFuture.get()
 
-            val preview = Preview.Builder()
-                .build()
-
-            preview.surfaceProvider =
-                previewView.surfaceProvider
+            val preview = if (previewView != null) {
+                Preview.Builder()
+                    .build()
+                    .also {
+                        it.surfaceProvider =
+                            previewView.surfaceProvider
+                    }
+            } else {
+                null
+            }
 
             val imageAnalysis =
                 ImageAnalysis.Builder()
@@ -51,11 +56,14 @@ class CameraManager(
 
                 cameraProvider.unbindAll()
 
+                val useCases = mutableListOf<androidx.camera.core.UseCase>()
+                preview?.let { useCases.add(it) }
+                useCases.add(imageAnalysis)
+
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
-                    preview,
-                    imageAnalysis
+                    *useCases.toTypedArray()
                 )
 
             } catch (exception: Exception) {

@@ -1,6 +1,7 @@
 package com.app.gesture_controls.accessibility
 import com.app.gesture_controls.actions.Action
 import com.app.gesture_controls.actions.ActionExecutor
+import com.app.gesture_controls.actions.GestureActionDispatcher
 
 import android.accessibilityservice.AccessibilityGestureEvent
 import android.accessibilityservice.AccessibilityService
@@ -13,21 +14,23 @@ class GestureAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "GestureControl"
+        var isRunning = false
+            private set
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-
+        isRunning = true
         Log.d(TAG, "Accessibility Service connected")
 
-        serviceInfo = serviceInfo.apply {
-            flags = flags or
-                    android.accessibilityservice.AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE
-        }
-
         actionExecutor = ActionExecutor(this)
+        GestureActionDispatcher.setExecutor(actionExecutor)
+    }
 
-        Log.d(TAG, "Touch exploration mode requested")
+    override fun onDestroy() {
+        super.onDestroy()
+        isRunning = false
+        GestureActionDispatcher.setExecutor(null)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

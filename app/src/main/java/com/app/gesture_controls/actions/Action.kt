@@ -6,5 +6,8 @@ enum class Action {
     RECENTS,
     VOLUME_UP,
     VOLUME_DOWN,
+    SCROLL_UP,
+    SCROLL_DOWN,
+    TAP,
     NONE
 }

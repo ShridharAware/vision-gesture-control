@@ -5,7 +5,5 @@
     android:description="@string/app_name"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagRequestTouchExplorationMode"
-    android:canRequestTouchExplorationMode="true"
     android:canPerformGestures="true"
     android:notificationTimeout="100" />

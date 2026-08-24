@@ -1,123 +1,165 @@
 package com.app.gesture_controls
 
-import com.app.gesture_controls.camera.CameraManager
-import com.app.gesture_controls.vision.HandLandmarkerHelper
-import com.app.gesture_controls.vision.HandOverlay
-
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.view.PreviewView
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.app.gesture_controls.accessibility.GestureAccessibilityService
+import com.app.gesture_controls.camera.CameraGestureService
+import com.app.gesture_controls.gesture.GestureControlState
+import com.app.gesture_controls.ui.theme.GesturecontrolsTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val cameraPermissionLauncher =
+    private val requestPermissionsLauncher =
         registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val cameraGranted = permissions[Manifest.permission.CAMERA] ?: false
+            val notificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
+            } else {
+                true
+            }
 
-            if (granted) {
-                showCamera()
+            if (cameraGranted && notificationGranted) {
+                // Permissions granted
             }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            showCamera()
-        } else {
-            cameraPermissionLauncher.launch(
-                Manifest.permission.CAMERA
-            )
+        checkPermissions()
+
+        setContent {
+            GesturecontrolsTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    GestureControlScreen()
+                }
+            }
         }
     }
 
-    private fun showCamera() {
+    private fun checkPermissions() {
+        val permissions = mutableListOf(Manifest.permission.CAMERA)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
-        setContent {
+        val missingPermissions = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
 
-            val previewView = remember {
-                PreviewView(this)
+        if (missingPermissions.isNotEmpty()) {
+            requestPermissionsLauncher.launch(missingPermissions.toTypedArray())
+        }
+    }
+
+    @Composable
+    fun GestureControlScreen() {
+        val state by CameraGestureService.currentState
+        var isAccessibilityEnabled by remember { mutableStateOf(GestureAccessibilityService.isRunning) }
+
+        // Periodically check accessibility status when activity is visible
+        LaunchedEffect(Unit) {
+            while (true) {
+                isAccessibilityEnabled = GestureAccessibilityService.isRunning
+                kotlinx.coroutines.delay(1000)
             }
+        }
 
-            val handOverlay = remember {
-                HandOverlay(this)
-            }
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Gesture Control",
+                style = MaterialTheme.typography.headlineMedium
+            )
 
-            DisposableEffect(Unit) {
-
-                val handLandmarkerHelper =
-                    HandLandmarkerHelper(
-                        context = this@MainActivity
-                    ) { result ->
-
-                        val hands = result.landmarks()
-
-                        if (hands.isNotEmpty()) {
-
-                            handOverlay.setHands(hands)
-
-                        } else {
-
-                            handOverlay.clear()
+            if (!isAccessibilityEnabled) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Accessibility Service is OFF",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "Required for scrolling and volume gestures.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Enable in Settings")
                         }
                     }
-
-                handLandmarkerHelper.setup()
-
-                val cameraManager =
-                    CameraManager(
-                        context = this@MainActivity,
-                        lifecycleOwner = this@MainActivity,
-                        handLandmarkerHelper = handLandmarkerHelper
-                    )
-
-                cameraManager.startCamera(previewView)
-
-                onDispose {
-                    handLandmarkerHelper.close()
                 }
             }
 
-            AndroidView(
-                factory = {
+            Spacer(modifier = Modifier.height(32.dp))
 
-                    android.widget.FrameLayout(this).apply {
+            Text(
+                text = "Status: ${state.name}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (state == GestureControlState.ACTIVE) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
+            )
 
-                        addView(
-                            previewView,
-                            android.widget.FrameLayout.LayoutParams(
-                                -1,
-                                -1
-                            )
-                        )
+            Spacer(modifier = Modifier.height(32.dp))
 
-                        addView(
-                            handOverlay,
-                            android.widget.FrameLayout.LayoutParams(
-                                -1,
-                                -1
-                            )
-                        )
+            Button(
+                onClick = {
+                    if (state == GestureControlState.INACTIVE) {
+                        CameraGestureService.start(this@MainActivity)
+                    } else {
+                        CameraGestureService.stop(this@MainActivity)
                     }
                 },
-                modifier = Modifier.fillMaxSize()
-            )
+                modifier = Modifier.width(200.dp)
+            ) {
+                Text(
+                    text = if (state == GestureControlState.INACTIVE) {
+                        "Start Gesture Control"
+                    } else {
+                        "Stop Gesture Control"
+                    }
+                )
+            }
         }
     }
 }

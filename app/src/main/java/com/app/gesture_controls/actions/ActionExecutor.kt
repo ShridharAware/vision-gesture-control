@@ -2,6 +2,8 @@ package com.app.gesture_controls.actions
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.accessibilityservice.GestureDescription
+import android.graphics.Path
 import android.media.AudioManager
 import android.util.Log
 
@@ -15,6 +17,10 @@ class ActionExecutor(
 
     private val audioManager =
         service.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    private val displayMetrics = service.resources.displayMetrics
+    private val screenWidth = displayMetrics.widthPixels
+    private val screenHeight = displayMetrics.heightPixels
 
     fun execute(action: Action) {
 
@@ -54,9 +60,79 @@ class ActionExecutor(
                 )
             }
 
+            Action.SCROLL_UP -> {
+                // Swipe from bottom to top (Next Reel)
+                swipe(
+                    screenWidth / 2f,
+                    screenHeight * 0.8f,
+                    screenWidth / 2f,
+                    screenHeight * 0.2f
+                )
+            }
+
+            Action.SCROLL_DOWN -> {
+                // Swipe from top to bottom (Previous Reel)
+                swipe(
+                    screenWidth / 2f,
+                    screenHeight * 0.2f,
+                    screenWidth / 2f,
+                    screenHeight * 0.8f
+                )
+            }
+
+            Action.TAP -> {
+                tap(screenWidth / 2f, screenHeight / 2f)
+            }
+
             Action.NONE -> {
                 // Do nothing
             }
         }
+    }
+
+    private fun swipe(
+        startX: Float,
+        startY: Float,
+        endX: Float,
+        endY: Float
+    ) {
+        val path = Path()
+        path.moveTo(startX, startY)
+        path.lineTo(endX, endY)
+
+        val gestureBuilder = GestureDescription.Builder()
+        gestureBuilder.addStroke(
+            GestureDescription.StrokeDescription(
+                path,
+                0,
+                300
+            )
+        )
+
+        service.dispatchGesture(
+            gestureBuilder.build(),
+            null,
+            null
+        )
+    }
+
+    private fun tap(x: Float, y: Float) {
+        val path = Path()
+        path.moveTo(x, y)
+
+        val gestureBuilder = GestureDescription.Builder()
+        gestureBuilder.addStroke(
+            GestureDescription.StrokeDescription(
+                path,
+                0,
+                50
+            )
+        )
+
+        service.dispatchGesture(
+            gestureBuilder.build(),
+            null,
+            null
+        )
     }
 }
