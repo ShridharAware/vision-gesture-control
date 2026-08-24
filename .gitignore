@@ -1,0 +1,39 @@
+# Built artifacts
+/build
+/captures
+.externalNativeBuild
+.cxx
+bin/
+gen/
+*.hprof
+
+# Gradle
+.gradle/
+
+# IDE - Android Studio / IntelliJ
+*.iml
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/shelf/
+/.idea/dictionaries/
+/.idea/tasks.xml
+
+# Local configuration
+local.properties
+
+# Kotlin
+.kotlin/
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.log
+
+# Secrets / Keys
+*.jks
+*.keystore
+google-services.json
